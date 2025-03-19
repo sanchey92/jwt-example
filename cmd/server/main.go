@@ -1,7 +1,20 @@
 package main
 
-import "fmt"
+import (
+	"context"
+
+	"github.com/sanchey92/jwt-example/internal/app"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	ctx := context.Background()
+
+	a, err := app.NewApp(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = a.Run(); err != nil {
+		panic(err)
+	}
 }
