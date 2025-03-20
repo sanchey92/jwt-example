@@ -2,13 +2,17 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
 	"github.com/sanchey92/jwt-example/internal/config"
 	"github.com/sanchey92/jwt-example/internal/logger"
+	"github.com/sanchey92/jwt-example/pkg/closer"
 )
 
 type App struct {
@@ -18,22 +22,40 @@ type App struct {
 
 func NewApp(ctx context.Context) (*App, error) {
 	a := &App{}
+
 	if err := a.initDeps(ctx); err != nil {
 		return nil, err
 	}
+
 	return a, nil
 }
 
-func (a *App) Run() error {
+func (a *App) Run() {
 	log := logger.GetLogger()
 
-	log.Info("Server started", zap.String("PORT", a.config.Port))
+	go func() {
+		if err := a.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("server failed", zap.Error(err))
+		}
+	}()
 
-	if err := a.httpServer.ListenAndServe(); err != nil {
-		return err
-	}
+	log.Info("Server started", zap.String("port", a.config.Port))
 
-	return nil
+	closer.Add(func() error {
+		log.Info("Shutting down server...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := a.httpServer.Shutdown(ctx); err != nil {
+			return err
+		}
+
+		log.Info("Server Stopped")
+		return nil
+	})
+
+	closer.Wait()
 }
 
 func (a *App) initDeps(ctx context.Context) error {
@@ -54,9 +76,7 @@ func (a *App) initDeps(ctx context.Context) error {
 }
 
 func (a *App) initConfig(_ context.Context) error {
-	if a.config == nil {
-		a.config = config.MustLoadConfig()
-	}
+	a.config = config.MustLoadConfig()
 	return nil
 }
 
@@ -73,7 +93,7 @@ func (a *App) initHTTPServer(_ context.Context) error {
 	})
 
 	a.httpServer = &http.Server{
-		Addr:    ":" + a.config.Port,
+		Addr:    fmt.Sprintf(":%s", a.config.Port),
 		Handler: r,
 	}
 
