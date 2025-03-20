@@ -2,12 +2,18 @@ package pg
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	appError "github.com/sanchey92/jwt-example/internal/errors"
 	"github.com/sanchey92/jwt-example/internal/logger"
+	"github.com/sanchey92/jwt-example/internal/models"
 )
 
 type Storage struct {
@@ -67,4 +73,42 @@ func (s *Storage) Close() error {
 		s.log.Info("Close connection to database")
 	}
 	return nil
+}
+
+func (s *Storage) Create(ctx context.Context, user *models.User) error {
+	_, err := s.db.Exec(ctx, createUser, user.ID, user.Email, user.Password, user.Role, user.CreatedAt, user.UpdatedAt)
+	if err != nil {
+		var pgxErr *pgconn.PgError
+		if errors.As(err, &pgxErr) && pgxErr.Code == "23505" {
+			return appError.ErrUserAlreadyExists
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *Storage) FindByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+	err := s.db.QueryRow(ctx, findByEmail, email).
+		Scan(&user.ID, &user.Email, &user.Password, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, appError.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *Storage) FindByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	var user models.User
+	err := s.db.QueryRow(ctx, findById, id).
+		Scan(&user.ID, &user.Email, &user.Password, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, appError.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
 }

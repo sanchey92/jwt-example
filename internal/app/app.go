@@ -11,15 +11,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/sanchey92/jwt-example/internal/config"
+	"github.com/sanchey92/jwt-example/internal/handlers"
 	"github.com/sanchey92/jwt-example/internal/logger"
+	"github.com/sanchey92/jwt-example/internal/service"
 	"github.com/sanchey92/jwt-example/internal/storage/pg"
 	"github.com/sanchey92/jwt-example/pkg/closer"
 )
 
 type App struct {
-	config     *config.Config
-	storage    *pg.Storage
-	httpServer *http.Server
+	config      *config.Config
+	storage     *pg.Storage
+	authService *service.AuthService
+	authHandler *handlers.AuthHandler
+	httpServer  *http.Server
 }
 
 func NewApp(ctx context.Context) (*App, error) {
@@ -65,6 +69,8 @@ func (a *App) initDeps(ctx context.Context) error {
 		a.initConfig,
 		a.initLogger,
 		a.initStorage,
+		a.initAuthService,
+		a.initAuthHandler,
 		//...
 		a.initHTTPServer,
 	}
@@ -98,8 +104,20 @@ func (a *App) initStorage(ctx context.Context) error {
 	return nil
 }
 
+func (a *App) initAuthService(_ context.Context) error {
+	a.authService = service.NewAuthService(a.storage)
+	return nil
+}
+
+func (a *App) initAuthHandler(_ context.Context) error {
+	a.authHandler = handlers.NewAuthHandler(a.authService)
+	return nil
+}
+
 func (a *App) initHTTPServer(_ context.Context) error {
 	r := chi.NewRouter()
+
+	r.Post("/register", a.authHandler.Register)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello from server"))
