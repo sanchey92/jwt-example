@@ -1,3 +1,4 @@
 bin
+logs
 .idea
 .env

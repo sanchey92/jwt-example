@@ -2,12 +2,13 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
 	"github.com/sanchey92/jwt-example/internal/config"
+	"github.com/sanchey92/jwt-example/internal/logger"
 )
 
 type App struct {
@@ -24,7 +25,9 @@ func NewApp(ctx context.Context) (*App, error) {
 }
 
 func (a *App) Run() error {
-	fmt.Println("Server running on port: " + a.config.Port)
+	log := logger.GetLogger()
+
+	log.Info("Server started", zap.String("PORT", a.config.Port))
 
 	if err := a.httpServer.ListenAndServe(); err != nil {
 		return err
@@ -36,6 +39,7 @@ func (a *App) Run() error {
 func (a *App) initDeps(ctx context.Context) error {
 	inits := []func(context.Context) error{
 		a.initConfig,
+		a.initLogger,
 		//...
 		a.initHTTPServer,
 	}
@@ -53,6 +57,11 @@ func (a *App) initConfig(_ context.Context) error {
 	if a.config == nil {
 		a.config = config.MustLoadConfig()
 	}
+	return nil
+}
+
+func (a *App) initLogger(_ context.Context) error {
+	logger.Init()
 	return nil
 }
 
