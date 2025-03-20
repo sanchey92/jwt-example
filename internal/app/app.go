@@ -12,11 +12,13 @@ import (
 
 	"github.com/sanchey92/jwt-example/internal/config"
 	"github.com/sanchey92/jwt-example/internal/logger"
+	"github.com/sanchey92/jwt-example/internal/storage/pg"
 	"github.com/sanchey92/jwt-example/pkg/closer"
 )
 
 type App struct {
 	config     *config.Config
+	storage    *pg.Storage
 	httpServer *http.Server
 }
 
@@ -39,7 +41,7 @@ func (a *App) Run() {
 		}
 	}()
 
-	log.Info("Server started", zap.String("port", a.config.Port))
+	log.Info("Server started", zap.String("Addr", a.httpServer.Addr))
 
 	closer.Add(func() error {
 		log.Info("Shutting down server...")
@@ -62,6 +64,7 @@ func (a *App) initDeps(ctx context.Context) error {
 	inits := []func(context.Context) error{
 		a.initConfig,
 		a.initLogger,
+		a.initStorage,
 		//...
 		a.initHTTPServer,
 	}
@@ -82,6 +85,16 @@ func (a *App) initConfig(_ context.Context) error {
 
 func (a *App) initLogger(_ context.Context) error {
 	logger.Init()
+	return nil
+}
+
+func (a *App) initStorage(ctx context.Context) error {
+	storage, err := pg.NewStorage(ctx, a.config.PgDSN)
+	if err != nil {
+		return err
+	}
+	a.storage = storage
+	closer.Add(a.storage.Close)
 	return nil
 }
 

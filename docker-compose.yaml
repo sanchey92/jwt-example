@@ -7,6 +7,6 @@ services:
     env_file:
       - .env
     ports:
-      - "54321:5432"
+      - "5432:5432"
     volumes:
       - postgres_volume:/var/lib/postgresql/data
