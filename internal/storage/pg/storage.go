@@ -112,3 +112,26 @@ func (s *Storage) FindByID(ctx context.Context, id uuid.UUID) (*models.User, err
 	}
 	return &user, nil
 }
+
+func (s *Storage) SaveToken(ctx context.Context, token *models.RefreshToken) error {
+	_, err := s.db.Exec(ctx, saveToken, token.ID, token.UserID, token.Token, token.ExpiresAt)
+	return err
+}
+
+func (s *Storage) GetToken(ctx context.Context, token string) (*models.RefreshToken, error) {
+	var t models.RefreshToken
+	err := s.db.QueryRow(ctx, getToken, token).Scan(&t.ID, &t.UserID, &t.Token, &t.ExpiresAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, appError.ErrInvalidToken
+		}
+		return nil, err
+	}
+
+	return &t, nil
+}
+
+func (s *Storage) DeleteToken(ctx context.Context, token string) error {
+	_, err := s.db.Exec(ctx, deleteToken, token)
+	return err
+}

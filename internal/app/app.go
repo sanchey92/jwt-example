@@ -105,7 +105,7 @@ func (a *App) initStorage(ctx context.Context) error {
 }
 
 func (a *App) initAuthService(_ context.Context) error {
-	a.authService = service.NewAuthService(a.storage)
+	a.authService = service.NewAuthService(a.storage, a.storage)
 	return nil
 }
 

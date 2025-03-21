@@ -12,3 +12,15 @@ const (
                 FROM users
                 WHERE id = $1`
 )
+
+const (
+	saveToken = `INSERT INTO refresh_tokens (id, user_id, token, expires_at)
+                 VALUES ($1, $2, $3, $4)`
+
+	getToken = `SELECT id, user_id, token, expires_at
+                 FROM refresh_tokens
+                 WHERE token = $1`
+
+	deleteToken = `DELETE FROM refresh_tokens
+                   WHERE token = $1`
+)

@@ -19,15 +19,23 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
-type AuthService struct {
-	userRepo UserRepository
-	log      *zap.Logger
+type TokenRepository interface {
+	SaveToken(ctx context.Context, token *models.RefreshToken) error
+	GetToken(ctx context.Context, token string) (*models.RefreshToken, error)
+	DeleteToken(ctx context.Context, token string) error
 }
 
-func NewAuthService(userRepo UserRepository) *AuthService {
+type AuthService struct {
+	userRepo  UserRepository
+	tokenRepo TokenRepository
+	log       *zap.Logger
+}
+
+func NewAuthService(userRepo UserRepository, tokenRepo TokenRepository) *AuthService {
 	return &AuthService{
-		userRepo: userRepo,
-		log:      logger.GetLogger(),
+		userRepo:  userRepo,
+		tokenRepo: tokenRepo,
+		log:       logger.GetLogger(),
 	}
 }
 
