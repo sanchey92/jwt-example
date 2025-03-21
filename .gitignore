@@ -1,7 +1,5 @@
 bin
 logs
 
-**/mocks
-
 .idea
 .env
