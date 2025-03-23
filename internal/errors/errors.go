@@ -14,11 +14,13 @@ var (
 )
 
 var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrInvalidPassword   = errors.New("invalid password")
-	ErrInvalidToken      = errors.New("invalid token")
-	ErrTokenExpired      = errors.New("token expired")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrUserAlreadyExists    = errors.New("user already exists")
+	ErrInvalidPassword      = errors.New("invalid password")
+	ErrInvalidToken         = errors.New("invalid token")
+	ErrTokenExpired         = errors.New("token expired")
+	ErrInvalidTokenLength   = errors.New("token length must be positive")
+	ErrFailedRandGeneration = errors.New("failed to generate random byte")
 )
 
 type ApiError struct {
