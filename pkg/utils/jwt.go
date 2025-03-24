@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	appError "github.com/sanchey92/jwt-example/internal/errors"
 	"github.com/sanchey92/jwt-example/internal/models"
@@ -35,4 +36,32 @@ func GenerateRefreshToken(length int) (string, error) {
 
 	tokenString := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(tokenBytes)
 	return tokenString, nil
+}
+
+func ParseToken(tokenString string, secret string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, appError.ErrInvalidToken
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, appError.ErrInvalidToken
+	}
+
+	return claims, nil
+}
+
+func extractUserID(claims jwt.MapClaims) (uuid.UUID, error) {
+	userIDStr, ok := claims["sub"].(string)
+	if !ok {
+		return uuid.Nil, appError.ErrInvalidToken
+	}
+
+	return uuid.Parse(userIDStr)
 }

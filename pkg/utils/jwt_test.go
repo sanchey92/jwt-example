@@ -13,9 +13,10 @@ import (
 	"github.com/sanchey92/jwt-example/internal/models"
 )
 
-const (
+var (
 	testSecret = "testSecret"
-	testTTL    = 5 // minutes
+	testTTL    = 5
+	testUUID   = uuid.New() // minutes
 )
 
 func TestGenerateJWTToken(t *testing.T) {
@@ -151,6 +152,108 @@ func TestGenerateRefreshToken(t *testing.T) {
 				token2, err := GenerateRefreshToken(tt.length)
 				assert.NoError(t, err)
 				assert.NotEqual(t, token, token2)
+			}
+		})
+	}
+}
+
+func TestParseToken(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *models.User
+		secret  string
+		ttl     int
+		wantErr bool
+	}{
+		{
+			name: "success case",
+			user: &models.User{
+				ID:   uuid.New(),
+				Role: models.RoleUser,
+			},
+			secret:  testSecret,
+			ttl:     testTTL,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, err := GenerateJWTToken(tt.user, tt.ttl, tt.secret)
+
+			assert.NoError(t, err)
+			assert.NotEmpty(t, token)
+
+			claims, err := ParseToken(token, tt.secret)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			}
+
+			assert.NoError(t, err)
+			assert.NotEmpty(t, claims)
+
+			role, ok := claims["role"].(string)
+
+			assert.True(t, ok)
+			assert.Equal(t, string(tt.user.Role), role)
+		})
+	}
+}
+
+func Test_extractUserID(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *models.User
+		uuid    uuid.UUID
+		secret  string
+		ttl     int
+		wantErr bool
+	}{
+		{
+			name: "success case",
+			user: &models.User{
+				ID:   testUUID,
+				Role: models.RoleUser,
+			},
+			uuid:    testUUID,
+			secret:  testSecret,
+			ttl:     testTTL,
+			wantErr: false,
+		},
+		{
+			name: "failure case",
+			user: &models.User{
+				ID:   uuid.Nil, // Или можно оставить валидный, но подменить claims позже
+				Role: models.RoleUser,
+			},
+			uuid:    testUUID, // Ожидаемое значение, но оно не должно совпасть
+			secret:  testSecret,
+			ttl:     testTTL,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, err := GenerateJWTToken(tt.user, tt.ttl, tt.secret)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, token)
+
+			claims, err := ParseToken(token, tt.secret)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, claims)
+
+			if tt.wantErr {
+				claims["sub"] = "invalid-uuid"
+				userID, err := extractUserID(claims)
+				assert.Error(t, err)
+				assert.Empty(t, userID)
+			} else {
+				userID, err := extractUserID(claims)
+				assert.NoError(t, err)
+				assert.NotEmpty(t, userID)
+				assert.Equal(t, tt.uuid, userID)
 			}
 		})
 	}
