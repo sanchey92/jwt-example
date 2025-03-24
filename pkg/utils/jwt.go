@@ -57,7 +57,7 @@ func ParseToken(tokenString string, secret string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func extractUserID(claims jwt.MapClaims) (uuid.UUID, error) {
+func ExtractUserID(claims jwt.MapClaims) (uuid.UUID, error) {
 	userIDStr, ok := claims["sub"].(string)
 	if !ok {
 		return uuid.Nil, appError.ErrInvalidToken

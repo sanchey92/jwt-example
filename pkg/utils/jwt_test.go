@@ -246,11 +246,11 @@ func Test_extractUserID(t *testing.T) {
 
 			if tt.wantErr {
 				claims["sub"] = "invalid-uuid"
-				userID, err := extractUserID(claims)
+				userID, err := ExtractUserID(claims)
 				assert.Error(t, err)
 				assert.Empty(t, userID)
 			} else {
-				userID, err := extractUserID(claims)
+				userID, err := ExtractUserID(claims)
 				assert.NoError(t, err)
 				assert.NotEmpty(t, userID)
 				assert.Equal(t, tt.uuid, userID)
