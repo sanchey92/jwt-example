@@ -123,6 +123,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*models
 		return nil, appError.InternalServer(err)
 	}
 
+	if err = s.saveRefreshToken(ctx, user.ID, tokenPair.RefreshToken); err != nil {
+		return nil, appError.InternalServer(err)
+	}
+
 	return tokenPair, nil
 }
 
