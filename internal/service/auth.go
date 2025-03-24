@@ -93,43 +93,6 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 	return tokenPair, nil
 }
 
-func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*models.TokenPair, error) {
-	token, err := s.tokenRepo.GetToken(ctx, refreshToken)
-	if err != nil {
-		if errors.Is(err, appError.ErrInvalidToken) {
-			return nil, appError.Unauthorized(appError.ErrInvalidToken)
-		}
-		return nil, appError.InternalServer(err)
-	}
-
-	if token.ExpiresAt.Before(time.Now()) {
-		return nil, appError.Unauthorized(appError.ErrTokenExpired)
-	}
-
-	user, err := s.userRepo.FindByID(ctx, token.UserID)
-	if err != nil {
-		if errors.Is(err, appError.ErrUserNotFound) {
-			return nil, appError.Unauthorized(appError.ErrUserNotFound)
-		}
-		return nil, appError.InternalServer(err)
-	}
-
-	tokenPair, err := s.generateTokenPair(user)
-	if err != nil {
-		return nil, appError.InternalServer(err)
-	}
-
-	if err = s.tokenRepo.DeleteToken(ctx, refreshToken); err != nil {
-		return nil, appError.InternalServer(err)
-	}
-
-	if err = s.saveRefreshToken(ctx, user.ID, tokenPair.RefreshToken); err != nil {
-		return nil, appError.InternalServer(err)
-	}
-
-	return tokenPair, nil
-}
-
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	return s.tokenRepo.DeleteToken(ctx, refreshToken)
 }

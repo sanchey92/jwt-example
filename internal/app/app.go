@@ -105,7 +105,7 @@ func (a *App) initStorage(ctx context.Context) error {
 }
 
 func (a *App) initAuthService(_ context.Context) error {
-	a.authService = service.NewAuthService(a.storage, a.storage)
+	a.authService = service.NewAuthService(a.storage, a.storage, a.config)
 	return nil
 }
 
@@ -118,10 +118,8 @@ func (a *App) initHTTPServer(_ context.Context) error {
 	r := chi.NewRouter()
 
 	r.Post("/register", a.authHandler.Register)
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello from server"))
-	})
+	r.Post("/login", a.authHandler.Login)
+	r.Post("/logout", a.authHandler.Logout)
 
 	a.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%s", a.config.Port),
