@@ -65,3 +65,12 @@ func ExtractUserID(claims jwt.MapClaims) (uuid.UUID, error) {
 
 	return uuid.Parse(userIDStr)
 }
+
+func IsTokenExpired(claims jwt.MapClaims) bool {
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return true
+	}
+
+	return time.Now().Unix() > int64(exp)
+}

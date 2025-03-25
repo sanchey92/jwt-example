@@ -13,6 +13,7 @@ import (
 	"github.com/sanchey92/jwt-example/internal/config"
 	"github.com/sanchey92/jwt-example/internal/handlers"
 	"github.com/sanchey92/jwt-example/internal/logger"
+	"github.com/sanchey92/jwt-example/internal/middleware"
 	"github.com/sanchey92/jwt-example/internal/service"
 	"github.com/sanchey92/jwt-example/internal/storage/pg"
 	"github.com/sanchey92/jwt-example/pkg/closer"
@@ -117,9 +118,16 @@ func (a *App) initAuthHandler(_ context.Context) error {
 func (a *App) initHTTPServer(_ context.Context) error {
 	r := chi.NewRouter()
 
+	r.Use(middleware.LoggingMiddleware())
+
 	r.Post("/register", a.authHandler.Register)
 	r.Post("/login", a.authHandler.Login)
 	r.Post("/logout", a.authHandler.Logout)
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.Authenticate(a.authService, a.config))
+		r.Get("/profile", a.authHandler.Profile)
+	})
 
 	a.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%s", a.config.Port),

@@ -103,6 +103,10 @@ func (s *AuthService) ExtractUserFromToken(ctx context.Context, tokenStr, secret
 		return nil, err
 	}
 
+	if utils.IsTokenExpired(claims) {
+		return nil, appError.ErrTokenExpired
+	}
+
 	userID, err := utils.ExtractUserID(claims)
 	if err != nil {
 		return nil, err
@@ -110,10 +114,52 @@ func (s *AuthService) ExtractUserFromToken(ctx context.Context, tokenStr, secret
 
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
-		return nil, appError.Unauthorized(err)
+		return nil, appError.ErrUserNotFound
 	}
 
 	return user, nil
+}
+
+func (s *AuthService) ExtractUserFromRefreshToken(
+	ctx context.Context,
+	refreshToken string,
+) (*models.RefreshToken, *models.User, error) {
+	storedToken, err := s.tokenRepo.GetToken(ctx, refreshToken)
+	if err != nil || storedToken == nil {
+		return nil, nil, appError.Unauthorized(appError.ErrInvalidToken)
+	}
+
+	user, err := s.userRepo.FindByID(ctx, storedToken.UserID)
+	if err != nil {
+		return nil, nil, appError.Unauthorized(appError.ErrUserNotFound)
+	}
+
+	return storedToken, user, nil
+}
+
+func (s *AuthService) IsRefreshTokenExpired(token *models.RefreshToken) bool {
+	if time.Now().After(token.ExpiresAt) {
+		return true
+	}
+
+	return false
+}
+
+func (s *AuthService) GetNewRefreshToken(ctx context.Context, userID uuid.UUID, tokenStr string) (string, error) {
+	if err := s.tokenRepo.DeleteToken(ctx, tokenStr); err != nil {
+		return "", err
+	}
+
+	newRefreshToken, err := utils.GenerateRefreshToken(32)
+	if err != nil {
+		return "", err
+	}
+
+	if err = s.saveRefreshToken(ctx, userID, newRefreshToken); err != nil {
+		return "", err
+	}
+
+	return newRefreshToken, nil
 }
 
 func (s *AuthService) generateTokenPair(user *models.User) (*models.TokenPair, error) {
